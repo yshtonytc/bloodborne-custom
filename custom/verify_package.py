@@ -54,6 +54,8 @@ def main():
     assert metadata['native']['glyph_range_references']>0
     assert (package/'licenses/NotoSansSC-OFL.txt').is_file()
     assert not (package/'user').exists(), 'Release contains user data'
+    subprocess.run([str(package/'tools/gem-drop-builder/gem-drop-builder.exe'),'--help'],check=True,timeout=30,
+                   stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
     print('Frozen GUI, isolated settings, native glyph ranges, font license and program manifest verified:',version)
 
 if __name__=='__main__':main()

@@ -65,6 +65,19 @@ def main():
         else:shutil.copy2(source,target)
     font=json.loads((ROOT/'custom/font.json').read_text())
     for name,info in font['files'].items():fetch(info['url'],cache/name,info['sha256'])
+    # Soulstruct 2.3.2's PyPI wheel omits the JSON resources imported by its
+    # Bloodborne modules. Restore them from a pinned, verified source archive.
+    source_info=json.loads((ROOT/'custom/soulstruct.json').read_text())
+    soul_source=fetch(source_info['url'],cache/'soulstruct-source.zip',source_info['sha256'])
+    import importlib.metadata
+    site=Path(importlib.metadata.distribution('soulstruct').locate_file('soulstruct'))
+    with zipfile.ZipFile(soul_source) as z:
+        for name in z.namelist():
+            marker='/src/soulstruct/'
+            if marker in name and name.endswith('.json'):
+                relative=name.split(marker,1)[1];target=site/relative
+                if not target.resolve().is_relative_to(site.resolve()):raise ValueError('Unsafe resource member')
+                target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read(name))
     os.environ['BBPORT_CHINESE_FONT']=str(cache/'NotoSansSC[wght].ttf')
     native=module('custom_native',ROOT/'tools/native_overlay_zh.py')
     assets=work/'font-assets';assets.mkdir()
@@ -103,6 +116,7 @@ def main():
         'upstream':config,'font':font,'native':report,'rumble':rumble},ensure_ascii=False,indent=2),encoding='utf-8')
     # Source and exact upstream provider-source archives accompany our binary.
     subprocess.run(['git','archive','--format=zip','--output',str(out/'Bloodborne-Custom-Source.zip'),'HEAD'],cwd=ROOT,check=True)
+    shutil.copy2(soul_source,out/'Soulstruct-Corresponding-Source.zip')
     for a in release['assets']:
         if 'src' in a['name'].lower() or 'source' in a['name'].lower():
             expected=a.get('digest','')
