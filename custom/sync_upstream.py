@@ -32,7 +32,8 @@ def main():
     git('add','custom/upstream.json')
     if git('diff','--cached','--name-only'):git('commit','-m','Record verified upstream '+tag)
     if a.push:
-        git('push','origin',commit+':refs/heads/upstream-windows','HEAD:refs/heads/'+config['custom_branch'])
+        git('push','https://github.com/'+config['custom_repository']+'.git',
+            commit+':refs/heads/upstream-windows','HEAD:refs/heads/'+config['custom_branch'])
     print('Merged '+tag+'. Run tests/build before publishing. Conflicts are never auto-resolved.')
 
 if __name__=='__main__':main()
