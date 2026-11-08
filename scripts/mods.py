@@ -303,6 +303,9 @@ def build_overlay(game, out, mods, beside_game=True):
             key = relative.as_posix().casefold()
             if key in owners:
                 print(f'Mods: {relative}: {owners[key]} -> {name}', file=sys.stderr)
+                if name.casefold().endswith('-mods') and [p.casefold() for p in relative.parts[1:2]] == ['event']:
+                    print(f"Mods: {relative}: {owners[key]}'s file is not used: seamless co-op needs "
+                          'its own co-op event file', file=sys.stderr)
             owners[key] = name
             replacements.append((relative, source))
             count += 1
@@ -353,8 +356,12 @@ def main():
     parser.add_argument('--layer', type=Path, action='append', default=[],
                         help="the port's own generated files (a dvdroot_ps4 inside), below the "
                              'mods and applied without them too (hud_layout.py)')
+    parser.add_argument('--game-mods-last', action='store_true',
+                        help="the game's -mods folder over the mods instead of below them (seamless "
+                             "co-op: its co-op event files must win over a mod's)")
     args = parser.parse_args()
     layers = [(layer.name, layer) for layer in args.layer if layer.is_dir()]
+    last = []
     if args.enabled == '1':
         # Preserve upstream's loose-overlay selection and local isolation/conflict checks.
         loose = child(args.mods_dir, 'dvdroot_ps4')
@@ -373,12 +380,13 @@ def main():
                 isolated = isolated or metadata.get('ignore_legacy_overlay') is True
         legacy = Path(str(args.game.resolve()) + '-mods')
         if legacy.is_dir() and not isolated:
-            layers.append((legacy.name, legacy))
+            (last if args.game_mods_last else layers).append((legacy.name, legacy))
         elif legacy.is_dir():
             print(f'Mods: skipped legacy overlay {legacy.name} (selected mod requests isolation)',
                   file=sys.stderr)
         layers.extend(chosen_mods)
         from bbport_gem_drop_config import check_layers
+        layers += last
         check_layers(layers)
     try:
         print(build_overlay(args.game, args.out, layers))

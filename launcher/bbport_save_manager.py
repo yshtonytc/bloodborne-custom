@@ -24,6 +24,8 @@ def refresh_summary(app, port, tr):
         app.save_restore_summary.configure(text=tr('Browse available save backups.'))
 
 def _user_dir(app, port):
+    if hasattr(app, 'shown_user_dir'):
+        return Path(app.shown_user_dir())
     return Path(app.var('user_dir', 'app').get() or Path(os.environ.get('BB_DATA_DIR', port)) / 'user')
 
 def open_manager(app, port, tr):
