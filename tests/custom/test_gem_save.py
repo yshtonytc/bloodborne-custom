@@ -87,7 +87,7 @@ class GemTests(unittest.TestCase):
         self.assertEqual((self.folder/'other.bin').read_bytes(), b'untouched')
         safety = Path(result['safety'])
         self.assertEqual((safety/gems.saves.SAVE_REL/'userdata0000').read_bytes(), self.data)
-        self.assertTrue(any(e['path'] == str(safety/gems.saves.SAVE_REL) for e in gems.saves.discover(self.user, self.port)))
+        self.assertTrue(any(Path(e['path']).resolve() == (safety/gems.saves.SAVE_REL).resolve() for e in gems.saves.discover(self.user, self.port)))
         gems.saves.restore(self.user, self.port, safety/gems.saves.SAVE_REL, check_closed=lambda: None)
         self.assertEqual(self.path.read_bytes(), self.data)
 
