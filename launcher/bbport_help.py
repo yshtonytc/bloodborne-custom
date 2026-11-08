@@ -614,16 +614,7 @@ def run_checks(game_dir, mods_dir, port_dir, output_res, cached=None):
         # ('2|': checked per patch group) is not reused.
         key = f'3|{(game / "eboot.bin").resolve()}|{stat.st_size}|{int(stat.st_mtime)}'
         state = cached.get('state') if cached and cached.get('key') == key else eboot_state(game)[0]
-        # Not the clean one: the clean copy back when it is still on this PC (scripts/clean_eboot.py), silently,
-        # the other one kept beside it.
-        restored = restore_eboot(game) if state != 'clean' else None
-        if restored:
-            source, backup = restored
-            checks.append(('ok', None, _('eboot.bin was not the clean 1.09 file: the clean copy from {0} is used '
-                                         'now, the other one is kept as {1}.').format(source.parent, backup.name)))
-            stat = (game / 'eboot.bin').stat()
-            key = f'3|{(game / "eboot.bin").resolve()}|{stat.st_size}|{int(stat.st_mtime)}'
-            state = eboot_state(game)[0]
+        # Local policy: report the original executable state without replacing it.
         eboot = {'key': key, 'state': state}
         size = number(stat.st_size)
         values = {}

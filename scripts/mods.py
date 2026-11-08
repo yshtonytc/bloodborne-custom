@@ -356,21 +356,30 @@ def main():
     args = parser.parse_args()
     layers = [(layer.name, layer) for layer in args.layer if layer.is_dir()]
     if args.enabled == '1':
-        # shadPS4's loose overlay convention, beside the original game.
-        legacy = Path(str(args.game.resolve()) + '-mods')
-        if legacy.is_dir():
-            layers.append((legacy.name, legacy))
-        # A directly selected loose overlay (a mods folder with a dvdroot_ps4 and no mod folders)
-        # is also accepted. Beside other mods a bare dvdroot_ps4 is one of them, with its switch
-        # and place in the order: as the whole overlay it left every other mod out.
+        # Preserve upstream's loose-overlay selection and local isolation/conflict checks.
         loose = child(args.mods_dir, 'dvdroot_ps4')
         names = selected(args.mods_dir, args.config)
+        chosen_mods = []
         if loose.is_dir() and set(discover(args.mods_dir)) <= {loose.name}:
             if loose.name in names or not content_root(loose):
-                layers.append((args.mods_dir.name, args.mods_dir))
+                chosen_mods.append((args.mods_dir.name, args.mods_dir))
         else:
-            for name in names:
-                layers.append((name, args.mods_dir / name))
+            chosen_mods = [(name, args.mods_dir / name) for name in names]
+        isolated = False
+        for _name, folder in chosen_mods:
+            manifest = folder / 'bbport-mod.json'
+            if manifest.is_file():
+                metadata = json.loads(manifest.read_text(encoding='utf-8'))
+                isolated = isolated or metadata.get('ignore_legacy_overlay') is True
+        legacy = Path(str(args.game.resolve()) + '-mods')
+        if legacy.is_dir() and not isolated:
+            layers.append((legacy.name, legacy))
+        elif legacy.is_dir():
+            print(f'Mods: skipped legacy overlay {legacy.name} (selected mod requests isolation)',
+                  file=sys.stderr)
+        layers.extend(chosen_mods)
+        from bbport_gem_drop_config import check_layers
+        check_layers(layers)
     try:
         print(build_overlay(args.game, args.out, layers))
     except OSError as error:

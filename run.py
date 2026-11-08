@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tempfile
 
 PORT = Path(__file__).resolve().parent
 
@@ -235,13 +236,14 @@ def run_script(name, *args, capture=False, optional=False, timeout=None):
     counts as a failure."""
     # Inside the packaged Bloodborne.exe (PyInstaller) the executable runs scripts itself.
     script = ['--script'] if getattr(sys, 'frozen', False) else []
-    command = [sys.executable, *script, str(PORT / 'scripts' / name), *map(str, args)]
+    command = [sys.executable, *script, str(PORT / 'scripts' / 'run_helper.py'), str(PORT / 'scripts' / name), *map(str, args)]
+    child_env = dict(os.environ, PYTHONIOENCODING='utf-8')
     for attempt in range(1, LOCK_TRIES + 1):
         # stdin given: the output handles are passed explicitly (a windowed Bloodborne.exe child would
         # get none otherwise). The errors are read for a locked file, then passed on.
         try:
             result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE if capture else None,
-                                    stderr=subprocess.PIPE, creationflags=no_console(),
+                                    stderr=subprocess.PIPE, env=child_env, creationflags=no_console(),
                                     timeout=timeout if capture and optional else None)
         except subprocess.TimeoutExpired as expired:
             echo_errors(expired.stderr or b'')
@@ -264,7 +266,7 @@ def run_script(name, *args, capture=False, optional=False, timeout=None):
             return None
         sys.exit(result.returncode)
     # Decoded as text=True did: the locale's encoding, universal newlines.
-    return io.TextIOWrapper(io.BytesIO(result.stdout)).read() if capture else None
+    return io.TextIOWrapper(io.BytesIO(result.stdout), encoding='utf-8').read() if capture else None
 
 
 # An antivirus that scans a file the port has just written holds it for a moment, and opening it fails
@@ -293,6 +295,42 @@ def auto_live_blurs_dof(output, config):
     (Native at 4K came out softer than Performance)."""
     width, height = (int(v) for v in output.split('x'))
     return (width > 1920 or height > 1080) and ini_value(config, 'effect_dof') != '0'
+
+
+def check_game_resources(game):
+    """Check the effective game/mod view before the native runtime loads its shaders."""
+    if os.environ.get('BB_SKIP_GAME_CHECK') == '1':
+        return
+    sys.path.insert(0, str(PORT / 'scripts'))
+    from check_resources import broken_files
+    damaged = broken_files(game)
+    if damaged:
+        fail('Damaged compressed shader files (the game may hang while loading):\n' +
+             '\n'.join(damaged) +
+             '\nExtract the game/update again, or disable the mod providing these files. '
+             'BB_SKIP_GAME_CHECK=1 bypasses this check.')
+
+
+def is_mod_view(path, original_game, out):
+    """Only mods.py's own temporary directories may be recursively removed."""
+    path, original_game, out = Path(path), Path(original_game).resolve(), Path(out).resolve()
+    parents = {out.resolve(), original_game.parent.resolve(),
+               (Path(tempfile.gettempdir()) / 'bbport-game-view').resolve()}
+    return (path.is_absolute() and path.name.startswith('mod-game-') and
+            not path.is_symlink() and not getattr(path, 'is_junction', lambda: False)() and
+            path.resolve().parent in parents and path.resolve() != original_game)
+
+
+def mod_result(output, original_game, out):
+    text = output.strip()
+    path = Path(text)
+    if not text or not path.is_absolute() or not (path / 'eboot.bin').is_file():
+        fail('Mods helper did not return a valid absolute game path; preparation stopped.')
+    if path.resolve() == original_game:
+        return original_game, None
+    if not is_mod_view(path, original_game, out):
+        fail('Mods helper returned a path outside its temporary overlay directory; preparation stopped.')
+    return path.resolve(), path.resolve()
 
 
 def ini_value(path, key):
@@ -623,21 +661,12 @@ def main():
         fail(f'The game folder {game} has no {" / ".join(missing)}: the game was not unpacked completely. '
              'Unpack the base game into a new, empty folder again and copy the 1.09 update over it.')
     if env.get('BB_SKIP_GAME_CHECK') != '1':
-        from clean_eboot import CLEAN_IMAGE, note as eboot_note, restore as restore_eboot
+        from clean_eboot import CLEAN_IMAGE
         try:
             digest = image_sha256(game)
         except (OSError, ValueError, KeyError, IndexError):
             digest = None  # prepare.py reports unreadable executables itself
-        # Not the clean 1.09 eboot.bin (a 60 fps one, a patched one, one cut off): the clean one comes back when it
-        # is still on this PC (clean_eboot.py), the other one is kept beside it.
-        if digest != CLEAN_IMAGE:
-            try:
-                restored = restore_eboot(game)
-            except Exception:  # a repair: never in the way of a start
-                restored = None
-            if restored:
-                print(eboot_note(restored))
-                digest = CLEAN_IMAGE
+        # Local policy: inspect only; never replace original game files automatically.
         prepatched = digest == LANCE_60FPS_IMAGE
         if prepatched:
             fail("This eboot.bin has Lance McDonald's 60 fps patch applied to it, which crashes the "
@@ -746,11 +775,12 @@ def main():
         env['BB_QUIT_TO_DESKTOP'] = '0'
         env['BB_REBIRTH'] = '0'
         view = run_script('mods.py', *mod_args, capture=True)
-    game = Path(view.strip())
-    mod_view = game if game.resolve() != original_game else None
+    game, mod_view = mod_result(view, original_game, out)
     if system.name != 'sce_sys':
         game = mod_view = system_view(original_game, mod_view, system, out)
+    map_process = None
     try:
+        check_game_resources(game)
         run_script('prepare.py', game, '--out', out)
         run_script('link_libc.py', game, '--out', out)
         run_script('link_modules.py', game, '--out', out)
@@ -871,16 +901,35 @@ def main():
             threading.Thread(target=thermal_watch, args=(game_over,), daemon=True).start()
         try:
             # No stdin: an inherited pipe (shells such as Git Bash) cost the game its console output.
-            if env.get('BB_EXIT_BACKUP') == '1':  # the save as the game left it, also after a crash
-                sys.path.insert(0, str(PORT / 'launcher'))
-                from bbport_exit_backup import run_with_backup
-                return run_with_backup(command, saves_dir, original_game, creationflags=no_console())
-            return subprocess.run(command, stdin=subprocess.DEVNULL, creationflags=no_console()).returncode
+            game_process = subprocess.Popen(command, stdin=subprocess.DEVNULL, creationflags=no_console())
+            # Map service is a separate topmost viewer; the native game binary is unchanged.
+            if getattr(sys, 'frozen', False) and env.get('BB_MAPS', '1') != '0' and (PORT / 'maps/maps.json').is_file():
+                try:
+                    map_process = subprocess.Popen([sys.executable, '--maps', '--watch-pid', str(game_process.pid)],
+                                                   cwd=PORT, stdin=subprocess.DEVNULL,
+                                                   creationflags=no_console())
+                    print('Maps: offline viewer ready; F10 toggles it while the game has focus')
+                except OSError as error:
+                    print(f'Maps: viewer unavailable ({error}); the game continues')
+            game_exit_code = game_process.wait()
+            if env.get('BB_EXIT_BACKUP', '1') != '0':
+                from exit_save_backup import safe_backup_on_exit
+                safe_backup_on_exit(saves_dir, game_exit_code, game_process.pid)
+            return game_exit_code
         finally:
             if game_over:
                 game_over.set()
     finally:
-        if mod_view:
+        if map_process is not None and map_process.poll() is None:
+            try:
+                map_process.wait(timeout=2)  # allow it to observe native game exit and close cleanly
+            except subprocess.TimeoutExpired:
+                map_process.terminate()
+                try:
+                    map_process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    map_process.kill()
+        if mod_view and is_mod_view(mod_view, original_game, out):
             # Read-only game files leave read-only links (mods.remove_overlay clears them).
             from mods import remove_overlay
             try:

@@ -59,11 +59,11 @@ HUNTERS_DREAM_SERVER = 'https://thehuntersdream.com'
 # SuperMedo Server: the shadNet server (accounts, bells and summons) and the game server above,
 # both supermedo.com's own.
 SUPERMEDO_SERVER, SUPERMEDO_WEBAPI = 'np.supermedo.com:31313', 'http://np.supermedo.com:31315'
-RELEASES_API = 'https://api.github.com/repos/Supermedo/bloodborne_pc/releases/latest'
-RELEASES_PAGE = 'https://github.com/Supermedo/bloodborne_pc/releases/latest'
+RELEASES_API = 'https://api.github.com/repos/yshtonytc/bloodborne-custom/releases/latest'
+RELEASES_PAGE = 'https://github.com/yshtonytc/bloodborne-custom/releases/latest'
 # The community site (install guide, FAQ, forum), linked from the side bar.
 COMMUNITY_SITE = 'https://bbport.de/'
-RELEASES_LIST_API = 'https://api.github.com/repos/Supermedo/bloodborne_pc/releases?per_page=100'
+RELEASES_LIST_API = 'https://api.github.com/repos/yshtonytc/bloodborne-custom/releases?per_page=100'
 # The betas (pre-releases v<VERSION>-beta.<N>): a beta asks here too, for the next one (update_to_offer).
 BETAS_API = 'https://api.github.com/repos/emurphy04/bloodborne_pc/releases?per_page=30'
 # The oldest version Advanced > Other versions offers: older ones cannot read today's settings. (A copy of
@@ -289,6 +289,9 @@ import bbport_gamepad  # noqa: E402
 import bbport_respec as respec  # noqa: E402
 import bbport_textfile as textfile  # noqa: E402
 
+import bbport_zh
+bbport_zh.install(bbport_lang, trophies)
+
 LANG = 'en'
 
 
@@ -386,7 +389,7 @@ INI_DEFAULTS = {'upscaler': 'fsr3', 'preset': '1', 'sharpen': '1', 'sharpness': 
                 **{key: '1' if on else '0' for key, _t, on in EFFECTS + EXTRAS + CHEATS + TWEAKS}}
 APP_DEFAULTS = {'ui_language': '', 'game_dir': str(PORT_DIR.parent / 'CUSA03173'), 'user_dir': '', 'cache_dir': '',
                 'dlc_dir': '',
-                'mods_dir': '', 'mods_enabled': True, 'patches_dir': '', 'language': '1',
+                'mods_dir': '', 'mods_enabled': True, 'maps_enabled': True, 'rumble_percent': '100', 'patches_dir': '', 'language': '1',
                 'voice_language': 'auto',
                 'player_name': '', 'fullscreen': False, 'exclusive_fullscreen': False, 'hdr': False, 'present_mode': 'Mailbox',
                 'fps_mode': 'uncap', 'frame_cap': '', 'draw_pipe': '', 'readbacks': '', 'low_vram': '', 'vram_warning': True,
@@ -408,7 +411,7 @@ APP_DEFAULTS = {'ui_language': '', 'game_dir': str(PORT_DIR.parent / 'CUSA03173'
                 # their upscaler was chosen for (one chosen by hand for another card is no choice for a
                 # new one); the graphics cards this PC has shown (a laptop's two are no new hardware when
                 # they take turns).
-                'auto_graphics': True, 'auto_hw': '', 'auto_undo': {}, 'auto_applied': {}, 'auto_applied_hw': '',
+                'auto_graphics': False, 'auto_hw': '', 'auto_undo': {}, 'auto_applied': {}, 'auto_applied_hw': '',
                 'auto_gpus': [],
                 'bench_goal': '60',  # the performance test's frame rate goal
                 'eboot_check': {},
@@ -428,8 +431,8 @@ APP_DEFAULTS = {'ui_language': '', 'game_dir': str(PORT_DIR.parent / 'CUSA03173'
                 # window ('output', 'last' or 'custom'), the player's own size and the last one it had.
                 'game_monitor': '', 'window_size': 'output', 'window_custom': '1600x900', 'window_last': '',
                 'output_display': False,  # output resolution: the game monitor's own, set at every start
-                'auto_backup': True,  # the saves backed up before every start (bbport_saves.auto_backup)
-                'exit_backup': False,  # and after the game exits (run.py, bbport_exit_backup)
+                'auto_backup': False,  # the saves backed up before every start (bbport_saves.auto_backup)
+                'exit_backup': True,  # and after the game exits (run.py, bbport_exit_backup)
                 'seen_version': '',  # the version (VERSION_TEXT) whose What's new was shown (bbport_news)
                 # Game tests (System & performance): the kind, the scenario, its options.
                 'test_mode': 'performance', 'test_scenario': 'hunters-view', 'test_compare': 'preset',
@@ -501,7 +504,8 @@ FPS_MODES = [('uncap', ('Unlocked (frame-time patch)', 'Без ограниче�
 PRESENT_MODES = [('Mailbox', ('Mailbox (low latency, no tearing)', 'Mailbox (без разрывов)')),
                  ('Fifo', ('FIFO (VSync)',)), ('FifoRelaxed', ('FIFO Relaxed',)),
                  ('Immediate', ('Immediate (tearing)', 'Immediate (с разрывами)'))]
-LANGUAGES = [('1', ('English', 'Английский')), ('8', ('Russian', 'Русский')), ('0', ('Japanese', 'Японский')),
+LANGUAGES = [('1', ('English', 'Английский')), ('11', ('简体中文',)), ('10', ('繁體中文',)),
+             ('8', ('Russian', 'Русский')), ('0', ('Japanese', 'Японский')),
              ('2', ('French', 'Французский')), ('3', ('Spanish', 'Испанский')), ('4', ('German', 'Немецкий')),
              ('5', ('Italian', 'Итальянский')), ('9', ('Korean', 'Корейский')),
              ('10', ('Traditional Chinese (繁體中文)', 'Традиционный китайский (繁體中文)')),
@@ -1316,13 +1320,15 @@ def game_environment(s, graphics=None):
     env['BB_MODS_ENABLED'] = '1' if s['mods_enabled'] else '0'
     env['BB_PATCHES_DIR'] = s['patches_dir'] or str(DATA_DIR / 'patches')
     env['BB_PATCHES_CONFIG'] = str(DATA_DIR / 'patches.json')
+    env['BB_MAPS'] = '1' if s.get('maps_enabled', True) else '0'
+    env['BB_RUMBLE_PERCENT'] = str(s.get('rumble_percent', '100'))
     env['BB_LANGUAGE'] = s['language']
     env['BB_DISCORD'] = '1' if DISCORD_APPLICATION_ID and s.get('discord_status', True) else '0'  # src/runtime_discord.c
     if DISCORD_APPLICATION_ID:
         env['BB_DISCORD_APP_ID'] = DISCORD_APPLICATION_ID
     env['BB_MENU_KEY'] = str(s.get('menu_key') or 'Insert')  # the in-game menu's key and combination
     env['BB_MENU_PAD'] = str(s.get('menu_pad') or 'l3+r3')
-    env['BB_EXIT_BACKUP'] = '1' if s.get('exit_backup', False) else '0'
+    env['BB_EXIT_BACKUP'] = '1' if s.get('exit_backup', True) else '0'
     env['BB_VOICE_LANGUAGE'] = s['voice_language']
     if str(s['player_name']).strip():
         env['BB_USER_NAME'] = str(s['player_name']).strip()
@@ -1521,6 +1527,12 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
         root.minsize(min(self.px(1000), free_w), min(self.px(680), free_h))
         self.compact = min(self.px(760), free_h) < self.px(740)  # a short screen: smaller banner and emblem
         theme.load_fonts(root)
+        if LANG == 'zh':
+            from tkinter import font as tkfont
+            available = set(tkfont.families(root))
+            family = next((n for n in ('Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC') if n in available), theme.BODY)
+            theme.HEAD = theme.HEAD_BOLD = theme.BODY = theme.BODY_MEDIUM = theme.BODY_SEMI = family
+        self.ui_font, self.heading_font = theme.BODY, theme.HEAD
         self.theme = theme.Theme(root, self.dpi)
         self.set_icon()
         self.style()
@@ -1620,6 +1632,14 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
         """bbport_theme's ttk style: rounded buttons and fields, switches, cards."""
         s = self.ttk.Style(self.root)
         self.theme.style(s)
+        s.configure('Play.TButton', font=(self.heading_font, 11, 'bold'))
+        s.configure('Treeview', background='#161b22', fieldbackground='#161b22',
+                    foreground='#f0f2f5', font=(self.ui_font, 10), rowheight=self.px(30))
+        s.map('Treeview', background=[('selected', '#70313b')],
+              foreground=[('selected', '#ffffff'), ('disabled', '#aeb6c2')])
+        s.configure('Treeview.Heading', background='#272e38', foreground='#ffffff',
+                    font=(self.ui_font, 10, 'bold'), padding=(self.px(8), self.px(6)))
+        s.map('Treeview.Heading', background=[('active', '#343e4b')], foreground=[('active', '#ffffff')])
         # FSR 4.1.1's provider menu (Graphics)
         s.configure('Fsr411.TMenubutton', background=CARD, arrowcolor=GOLD, padding=4)
         s.map('Fsr411.TMenubutton', foreground=[('disabled', MUTED)], background=[('active', CARD)])
@@ -2050,6 +2070,9 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
         # the page is built under the cover (Launcher.cover), not after it goes.
         outer.redisplay = lambda: canvas.itemconfigure(window, state='normal')
         self.pages[name] = outer
+        if name == 'saves':
+            import bbport_gem_editor
+            bbport_gem_editor.build_controls(self, inner, PORT_DIR)
         return inner
 
     # ---- layout ------------------------------------------------------------------------------
@@ -2354,7 +2377,7 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
 
     def title_state(self):
         """The maximize button's glyph follows the window's state; Windows learns where the bar is."""
-        if not getattr(self, 'title_buttons', None):
+        if not getattr(self, 'title_buttons', None) or not self.title_buttons['maximize'].winfo_exists():
             return
         zoomed = self.root.state() == 'zoomed'
         glyph = self.TITLE_ICONS['restore' if zoomed else 'maximize']
@@ -2429,7 +2452,12 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
 
     def wheel(self, event):
         """Scrolls the page in pixels (touchpads send small steps), once per redraw however many
-        wheel events came in meanwhile. Over the side bar's entries while they scroll: those."""
+        wheel events came in meanwhile."""
+        if not hasattr(event.widget, 'winfo_toplevel') or 'popdown' in str(event.widget):
+            return  # ttk's internal drop-down list may arrive as a Tcl path, not a Python widget.
+        grab = self.root.grab_current()
+        if event.widget.winfo_toplevel() is not self.root or (grab is not None and grab.winfo_toplevel() is not self.root):
+            return  # A dialog must never scroll the page behind it.
         if self.nav_scrolls and str(event.widget).startswith(str(self.nav_list)):
             self.nav_scroll(int(-event.delta / 120 * self.px(40)))
             return
@@ -3570,6 +3598,8 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
         f = self.scrolled_page('mods', _('Mods & patches', 'Моды и патчи'),
                                _('The game files are never changed: mods are layered over them at start.',
                                  'Файлы игры не меняются: моды накладываются при запуске.'))
+        import bbport_gem_drop_ui
+        bbport_gem_drop_ui.build_controls(self, f, PORT_DIR)
         self.section(f, _('Mods', 'Моды'), top=4)
         self.check(f, 'mods_enabled', 'app', _('Load mods', 'Загружать моды'),
                    _('Loose-file mods, each in its own folder (with dvdroot_ps4, or chr\\, parts\\ … directly).',
@@ -3894,6 +3924,8 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
         self.remap_clear_marks = {}  # (output, slot) -> the small × that clears that slot
         self.remap_listening = False
         self.mouse_vars = {}  # mouse_settings key -> its widget's variable (apply_layout_preset)
+        import bbport_rumble
+        bbport_rumble.add_controls(self, f, PORT_DIR, game_environment)
 
         self.row(f, _('You play with'), self.device_switch(f),
                  _('Keyboard and mouse turns the mouse camera on and uses the Dark Souls III layout '
@@ -4496,12 +4528,22 @@ class Launcher(bbport_setup.SetupMixin, bbport_help.HelpMixin, bbport_search.Sea
             if poller is not None:
                 state['poll_job'] = self.root.after(10, poll_mouse)
 
+    def open_maps(self):
+        command = [sys.executable, '--maps', '--show'] if FROZEN else [
+            sys.executable, str(Path(__file__).resolve()), '--maps', '--show']
+        try:
+            subprocess.Popen(command, cwd=PORT_DIR, creationflags=NO_WINDOW)
+        except OSError as error:
+            self.messagebox.showerror('Bloodborne', str(error))
+
     def build_advanced(self):
         ttk = self.ttk
         f = self.scrolled_page('advanced', _('Advanced', 'Дополнительно'),
                                _('Launcher options, performance switches and diagnostics.',
                                  'Настройки лаунчера, производительность и диагностика.'))
         self.section(f, _('Launcher', 'Лаунчер'), top=4)
+        self.check(f, 'maps_enabled', 'app', _('Enable offline maps while playing (F10)'))
+        self.row(f, _('Offline maps (F10)'), self.ttk.Button(f, text=_('Open'), command=self.open_maps))
         self.check(f, 'check_updates', 'app', _('Check for updates when the launcher opens',
                                                 'Проверять обновления при открытии лаунчера'))
         holder = ttk.Frame(f)
@@ -6741,6 +6783,10 @@ def restore_benchmark_backup(user):
 def main():
     global LANG
     args = sys.argv[1:]
+    if args[:1] == ['--maps']:
+        import bbport_maps
+        watch_pid = int(args[args.index('--watch-pid') + 1]) if '--watch-pid' in args else 0
+        sys.exit(bbport_maps.run(PORT_DIR, watch_pid=watch_pid, show='--show' in args))
     if args and args[0] in ('--run', '--script'):
         sys.exit(run_role(args))
     if args[:1] == ['--after'] and len(args) >= 2:

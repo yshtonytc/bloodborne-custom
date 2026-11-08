@@ -1,0 +1,6 @@
+Gem save layout research: https://github.com/Noxde/Bloodborne-save-editor (GPL-3.0).
+Gem catalog: https://github.com/SpetsTheWise/bloodborne-hunters-workshop (GPL-3.0-or-later), originally from the Noxde project.
+Names, descriptions and ratings retain the original authors copyright.
+gem-save-reference: d8d03658f288fe747f819d0dc9a09c5f9d2e1668
+gem-editor-reference: ba5029494a4cf2db098d0efd6132cc99080bb99a
+Original game parameter SHA-256: 581e28302a231a10ad333806dfc90f41425db4f9f146799dca625f8d83c760c3

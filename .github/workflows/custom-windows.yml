@@ -1,0 +1,62 @@
+name: Bloodborne custom Windows
+on:
+  push:
+    branches: [custom]
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: 'Optional upstream tag, or latest; blank builds the pinned version'
+        type: string
+        default: ''
+      publish:
+        description: 'Publish the tested custom package to this repository'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: bloodborne-custom-windows
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: custom
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build tools
+        run: |
+          python -m pip install pyinstaller==6.22.3 pillow fonttools capstone pefile soulstruct==2.3.2
+          python -m pip install --target tools-local/zig ziglang==0.13.0
+      - name: Merge upstream when requested
+        if: github.event_name == 'workflow_dispatch' && inputs.upstream_tag != ''
+        env:
+          UPSTREAM_TAG: ${{ inputs.upstream_tag }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          python custom/sync_upstream.py --tag "$env:UPSTREAM_TAG" --push
+      - name: Save rules and restoration regression tests
+        run: python -m unittest discover -s tests/custom -p 'test_*.py'
+      - name: Build verified release with OFL Chinese font
+        run: python custom/build_release.py
+      - name: Verify frozen launcher and package
+        run: python custom/verify_package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bloodborne-Custom-Windows
+          path: dist/custom/*
+      - name: Publish this repository's custom release
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $metadata = Get-Content custom/upstream.json | ConvertFrom-Json
+          $commit = git rev-parse HEAD
+          gh release create $metadata.tag dist/custom/* --target $commit --title "Bloodborne 中文定制版 $($metadata.tag)" --notes-file custom/RELEASE-NOTES.md --latest

@@ -1335,9 +1335,6 @@ class SetupMixin:
                              640).pack(fill='x', padx=(px(26), 0))
 
             items = [b for b in saves.backups(self.save_user_dir()) if b.ok]
-            if not items:
-                tk.Label(body, text=_('No backups yet.'), bg=theme.CARD, fg=theme.MUTED,
-                         font=(theme.BODY, 10)).pack(anchor='w', pady=(px(12), 0))
             for item in items if state['all'] else items[:self.BACKUPS_SHOWN]:
                 self.backup_row(body, item, state, draw)
             if len(items) > self.BACKUPS_SHOWN:
@@ -1853,7 +1850,9 @@ class SetupMixin:
         self.characters_view = self.characters_card(f)
         self.characters_view.grid(row=self.next_row(f), column=0, columnspan=2, sticky='we', pady=(px(4), 0))
         self.index_entry(self.characters_view, _('Your characters'), _('Saves'), 'characters')
-        self.section(f, _('Backups'))
+        self.section(f, _('Save backups'))
+        import bbport_save_manager
+        bbport_save_manager.build_controls(self, f, L.PORT_DIR, _)
         self.backups_view = self.backups_card(f)
         self.backups_view.grid(row=self.next_row(f), column=0, columnspan=2, sticky='we', pady=(px(4), 0))
         # the card is drawn anew on every change: the search points at the card
@@ -1862,12 +1861,22 @@ class SetupMixin:
         self.index_entry(self.backups_view, _('Back up now'), _('Backups'), 'button:backup')
         self.index_entry(self.backups_view, _('Restore a backup'), _('Backups'), 'button:restore')
         self.index_entry(self.backups_view, _('Add a backup file…'), _('Backups'), 'button:add_backup')
-        self.section(f, _('From other versions'))
-        self.note(f, _('Characters from shadPS4, Awaken\'s port, bbhost or a PS4 export: found on this PC and copied '
-                       'into this port\'s saves folder. Your current saves are backed up first.'), top=0)
-        found = self.saves_card(f, manager=True)  # drawn anew too: the search points at the card
-        found.grid(row=self.next_row(f), column=0, columnspan=2, sticky='we', pady=(px(8), 0))
-        self.index_entry(found, _('Import saves from other versions'), _('From other versions'), 'button:import')
+        # Keep importing available inside the single backups section, collapsed
+        # until requested. No second permanent import/restore area on this page.
+        imports = self.saves_card(f, manager=True)
+        row = self.next_row(f)
+        actions = self.ttk.Frame(f)
+        actions.grid(row=row,column=0,columnspan=2,sticky='w',pady=(px(8),0))
+        imports.grid(row=row+1,column=0,columnspan=2,sticky='we',pady=(px(8),0))
+        imports.grid_remove()
+        def toggle_imports():
+            if imports.winfo_manager():
+                imports.grid_remove()
+            else:
+                imports.grid()
+        self.ttk.Button(actions,text=_('Import saves from another version…'),
+                        command=toggle_imports).pack(side='left')
+        self.save_import_view = imports
         self.section(f, _('Saves folder'))
         self.folder(f, 'user_dir', _('Saves folder', 'Папка сохранений'),
                     _('Choose the saves folder', 'Выберите папку сохранений'),
