@@ -1,8 +1,8 @@
 {
   "repository": "Supermedo/bloodborne_pc",
-  "tag": "windows-v1.9.8.4",
-  "commit": "115a0299aa0f7132e98305b74855bf5840495ba1",
-  "package_sha256": "sha256:a2e9b25312b5260de0f5098b38e921e2c614dd239171d2ae91838ccb12de6c3c",
+  "tag": "windows-v1.9.8.6",
+  "commit": "b69561c0fae84f115db00110d28442ee5f3672d5",
+  "package_sha256": "sha256:182be6863141c9c7e4622731e67a2c25ee3dfe97f62255bfb2af1a194c673317",
   "custom_repository": "yshtonytc/bloodborne-custom",
   "custom_branch": "custom"
 }
