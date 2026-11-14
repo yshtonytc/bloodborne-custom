@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 import urllib.request
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -25,8 +26,10 @@ def main():
     url='https://github.com/'+config['repository']+'.git'
     git('fetch',url,'refs/tags/'+tag)
     commit=git('rev-parse','FETCH_HEAD^{commit}')
+    previous=git('rev-parse','HEAD')
     # Keep all local changes. Git reports conflicting files instead of overwriting them.
     subprocess.run(['git','merge','--no-edit',commit],cwd=ROOT,check=True)
+    subprocess.run([sys.executable,str(ROOT/'custom/check_translation_delta.py'),previous],cwd=ROOT,check=True)
     config.update(tag=tag,commit=commit,package_sha256=asset['digest'])
     config_path.write_text(json.dumps(config,indent=2)+'\n',encoding='utf-8')
     git('add','custom/upstream.json')
