@@ -6,10 +6,17 @@
 
 ## 更新到作者新版
 
-在 GitHub Actions 的 **Bloodborne custom Windows → Run workflow**：
-`upstream_tag` 填 `latest` 或准确的 `windows-v…` 标签。
-先不勾选 publish，完成合并、回归测试、官方包 SHA-256 校验、构建及字体检查。
-检查构建产物后，再留空 upstream_tag、勾选 publish 发布当前分支。
+默认由 **Bloodborne custom Windows** 每 6 小时检查一次上游正式版。
+没有新版本且已有成品时跳过；有新版时合并、检查新增中文、回归测试、构建并验证字体和程序清单，
+全部成功后才推送维护分支并发布。冲突、缺翻译和任何构建失败均不会发布。
+
+手动检查可运行工作流并勾选 `check_only`，不启动 Windows 构建。
+人工修复后发布：`upstream_tag` 填准确目标（或留空使用当前基线），勾选 `publish`。
+不勾选 publish 的试构建不会推送临时合并；后续发布需再次指定同一目标标签。
+
+本机使用 `update-local.cmd`，也可双击工作区的 `升级两个游戏.cmd`。
+只下载校验后的成品，不重新合并或编译；已最新立即结束。
+GUI 检查已在发布 CI 完成，排障时用准确 `--tag` 加 `--verify-gui` 在本机重做。
 
 有冲突时流程会停止，既不覆盖定制源码，也不发布半成品。在本地执行：
 
