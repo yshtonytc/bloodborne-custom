@@ -158,3 +158,25 @@ TRANSLATIONS.update({'Safety copy': '安全副本'})
 TRANSLATIONS.update({'Import saves from another version…': '导入其他版本存档…'})
 
 TRANSLATIONS.update({'Backup time':'备份时间','Backup source':'备份来源','Game ID':'游戏编号','Size':'大小'})
+
+TRANSLATIONS.update({
+    'A game patch (game version 1.09). "Highest" can break armor and capes: parts go missing or look wrong.': '游戏补丁（需要 1.09 版本）。“最高”可能导致盔甲和披风部件缺失或显示异常。',
+    'Bloodborne Seamless co-op is in your Steam library. It starts with the settings saved in this launcher.': '血源无缝联机已添加到 Steam 库，将使用本启动器保存的设置启动。',
+    'Both start Seamless co-op straight away with the settings saved in this launcher, as "Bloodborne Seamless co-op"; the normal game keeps its own shortcut and Steam entry.': '两者均以“Bloodborne Seamless co-op”直接启动无缝联机，使用启动器保存的设置；普通游戏保留自己的快捷方式和 Steam 条目。',
+    'Choose the game folder with eboot.bin.': '请选择包含 eboot.bin 的游戏目录。',
+    'Object motion unavailable for this GPU/driver.': '此显卡或驱动不支持物体运动矢量。',
+    "Show my hunter's stats on Discord": '在 Discord 显示猎人属性',
+    'Your add-ons, one folder each named like SPEXPANSIONDLC03 (The Old Hunters). Only needed with the base game alone; the Game of the Year editions have it.': '附加内容目录，每个文件夹名称类似 SPEXPANSIONDLC03（老猎人）。仅基础版需要提供，年度版已包含。',
+    'Your edition ({}) already includes The Old Hunters.': '你的版本（{}）已包含老猎人。',
+    'Your level, Blood Echoes and Insight; the area and boss still show.': '显示等级、血之回响和灵视，同时保留区域和 Boss 信息。',
+    'Your own Bloodborne game files, any edition (eboot.bin, sce_module, sce_sys, dvdroot_ps4); version 1.09 for the community patches.': '你自己的任意版本血源游戏文件（eboot.bin、sce_module、sce_sys、dvdroot_ps4）；社区补丁需要 1.09 版本。',
+    '{} · game version {}': '{} · 游戏版本 {}',
+    'Borderless fullscreen': '无边框全屏',
+    'The game in a window without a frame over the whole monitor: Alt+Tab is instant and other windows can be on top of it. Turns Fullscreen off.': '游戏以无边框窗口铺满显示器，Alt+Tab 可立即切换，其他窗口可显示在其上方。启用后关闭独占全屏。',
+    'Your own Bloodborne game files (any edition) with the 1.09 update.': '你自己的血源游戏文件（任意版本），已安装 1.09 更新。',
+    '{}: a Game of the Year Edition, with The Old Hunters.': '{}：年度版，包含老猎人。',
+    '{}: not a retail release of Bloodborne. The port runs Bloodborne of every region, the Game of the Year editions too.': '{}：不是血源零售版本。移植版支持所有地区的血源，包括年度版。',
+    '{}: the base game. The Old Hunters, if you own it, comes from its DLC folder (Game files).': '{}：基础版。若拥有老猎人，请在“游戏文件”中提供对应 DLC 目录。',
+    'All graphics': '全部图形设置', 'Expert view': '专家视图',
+    'Object motion vectors': '物体运动矢量',
+})
